@@ -1,27 +1,33 @@
 document.addEventListener("DOMContentLoaded", preparePopup);
 
 function queryForLinks() {
-    chrome.storage.local.get("tabId",
-        function(tabIdContainer) {
-            chrome.storage.local.get("episodeLinkOffsetIndex", //dependency 4 - index
-                function(indexContainer) {
-                    var index = indexContainer.episodeLinkOffsetIndex;
-                    var firstIndex = index;
-                    var secondIndex = index + 1;
+	chrome.tabs.query({
+		"active": true,
+		"currentWindow": true
+	}, function (tabs) {
+		var tab = tabs[0];
+		var tabId = tab.id;
+		
+		chrome.storage.local.get("episodeLinkOffsetIndex", //dependency 4 - index
+            function(indexContainer) {
+                var index = indexContainer.episodeLinkOffsetIndex;
+                var firstIndex = index;
+                var secondIndex = index + 1;
 
-                    chrome.tabs.sendMessage(tabIdContainer.tabId,
-                    {
-                        "sender": "popup",
-                        "actions": [
-                            {
-                                "type": "routine",
-                                "name": "digForLinks",
-                                "arguments": [firstIndex, secondIndex]
-                            }
-                        ]
-                    });
+                chrome.tabs.sendMessage(tabId,
+                {
+                    "sender": "popup",
+                    "actions": [
+                        {
+                            "type": "routine",
+                            "name": "digForLinks",
+                            "arguments": [firstIndex, secondIndex]
+                        }
+                    ]
                 });
-        });
+            }
+		);
+	});
 }
 
 function preparePopup() {

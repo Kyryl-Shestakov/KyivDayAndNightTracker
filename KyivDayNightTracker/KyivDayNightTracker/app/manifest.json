@@ -6,6 +6,7 @@
   "version": "1.0",
 
   "permissions": [
+	"declarativeContent",
     "http://player.novy.tv/embed/*",
     "https://player.novy.tv/embed/*",
     "activeTab",

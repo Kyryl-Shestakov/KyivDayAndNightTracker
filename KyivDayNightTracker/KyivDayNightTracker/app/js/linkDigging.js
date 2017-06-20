@@ -45,7 +45,7 @@ function digForLinks(firstIndex, secondIndex) {
         return;
     }
 
-    var postCount = document.querySelectorAll(".constructor-row:first-child div.medium_list > article").length - 1; //The first article in the post list is an ad, that is why the article count is decreased by one
+    var postCount = queryPostCount();
     //TODO: load more posts
     var maxIndex = Math.max(firstIndex, secondIndex);
 
@@ -155,4 +155,8 @@ function processVideoFrameDocument(videoFrameDocument, postCallback) {
     postCallback(videoLink);
 }
 
-
+function queryPostCount() {
+    //The first article in the post list is an ad, that is why the article count is decreased by one
+    var count = document.querySelectorAll("div.constructor-row:first-of-type div.medium_list > article").length - 1;
+    return count;
+}

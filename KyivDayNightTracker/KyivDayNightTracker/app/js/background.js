@@ -1,4 +1,35 @@
-﻿chrome.runtime.onMessage.addListener(processResponse);
+﻿// When the extension is installed or upgraded ...
+chrome.runtime.onInstalled.addListener(function() {
+  // Replace all rules ...
+  chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
+    // With a new rule ...
+    chrome.declarativeContent.onPageChanged.addRules([
+      {
+        // That fires when a page's URL corresponds to http://kyivdennoch.novy.tv/ua/ or http://kyivdennoch.novy.tv/ua/episodes/
+        conditions: [
+          new chrome.declarativeContent.PageStateMatcher({
+            pageUrl: { 
+				hostEquals: "kyivdennoch.novy.tv",
+				pathEquals: "/ua/",
+				schemes: ["http"]
+			}
+          }),
+		  new chrome.declarativeContent.PageStateMatcher({
+            pageUrl: { 
+				hostEquals: "kyivdennoch.novy.tv",
+				pathEquals: "/ua/episodes/",
+				schemes: ["http"]
+			}
+          })
+        ],
+        // And shows the extension's page action.
+        actions: [ new chrome.declarativeContent.ShowPageAction() ]
+      }
+    ]);
+  });
+});
+
+chrome.runtime.onMessage.addListener(processResponse);
 
 //chrome.tabs.query({
 //    "active": true,
@@ -14,23 +45,15 @@
 //    }
 //});
 
-chrome.tabs.onActivated.addListener(function (tabInfo) {
-    var tabId = tabInfo.tabId;
+ //chrome.tabs.onActivated.addListener(function (tabInfo) {
+ //    var tabId = tabInfo.tabId;
 
-    chrome.tabs.get(tabId, function (tab) {
-        var intendedUrl = "http://kyivdennoch.novy.tv/ua/episodes/";
-        var tabUrl = tab.url;
-
-        if (tabUrl === intendedUrl || tabUrl === "http://kyivdennoch.novy.tv/ua/") {
-            chrome.storage.local.set({
-                "tabId": tabId
-            }, function () {
-                chrome.pageAction.show(tabId);
-            });
-        }
-    });
+ //    chrome.tabs.get(tabId, function (tab) {
+ //        chrome.storage.local.set({
+ //            "tabId": tabId
+ //        });
     
-});
+ //});
 
 function checkPage() {
     
