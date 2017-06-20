@@ -1,0 +1,33 @@
+{
+  "manifest_version": 2,
+
+  "name": "Kyiv Day and Night Tracker",
+  "description": "This extension gathers two links to the show episode parts",
+  "version": "1.0",
+
+  "permissions": [
+    "http://player.novy.tv/embed/*",
+    "https://player.novy.tv/embed/*",
+    "activeTab",
+    "tabs",
+    "storage",
+    "clipboardWrite"
+  ],
+  "content_scripts": [
+    {
+      "matches": [ "http://kyivdennoch.novy.tv/ua/", "http://kyivdennoch.novy.tv/ua/episodes/" ],
+      "js": [ "js/linkDigging.js" ],
+      "run_at": "document_end"
+    }
+  ],
+  "background": {
+    "scripts": [ "js/background.js" ],
+    "persistent": false
+  },
+  "page_action": {
+    "default_icon": {
+      "16": "img/logonew16.png"
+    },
+    "default_popup": "popup.html"
+  }
+}
