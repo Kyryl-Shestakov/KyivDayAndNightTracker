@@ -1,4 +1,162 @@
-﻿chrome.runtime.onMessage.addListener(processRequest);
+﻿var linkDiggingApi = (function () {
+    function digForLinks(episodeIndex) {
+        var response = {
+            "receiver": "",
+            "actions": []
+        };
+
+        if (episodeIndex < 0) {
+            response.receiver = "background";
+            response.actions.push({
+                "type": "error",
+                "name": "handleNegativeEpisodeIndex",
+                "arguments": ["Episode index is negative. Only non-negative indeces are allowed.", episodeIndex]
+            });
+            chrome.runtime.sendMessage(response);
+            return;
+        }
+
+        var postCount = queryPostCount();
+        //TODO: load more posts
+
+        if (episodeIndex >= postCount) {
+            response.receiver = "background";
+            response.actions.push({
+                "type": "error",
+                "name": "handleIndexOverflow",
+                "arguments": ["There is no corresponding episode for specified index. Load more posts.", episodeIndex]
+            });
+            chrome.runtime.sendMessage(response);
+            return;
+        }
+
+        var action = {
+            "type": "routine",
+            "name": "processVideoHandle",
+            "arguments": []
+        }
+
+        response.actions.push(action);
+
+        var postOffset = 2; //because episodeIndex starts with zero and the first article is an ad
+
+        var pageLink = document.querySelector("div.medium_list > article:nth-child(" + (episodeIndex + postOffset) + ") > a").href;
+
+        var videoTitle = document.querySelector("div.medium_list > article:nth-child(" + (episodeIndex + postOffset) + ") > a > aside").innerText;
+
+        //TODO: implement determination of link count and their position
+
+        var videoHandle = {
+            "title": videoTitle,
+            "links": []
+        };
+
+        chrome.storage.local.set(
+            {
+                "videoHandle": videoHandle
+            },
+            function () {
+                getVideoLinks(
+                    pageLink,
+                    function () {
+                        chrome.storage.local.get(
+                            "videoHandle",
+                            function (videoHandleContainer) {
+                                var resultingVideoHandle = videoHandleContainer.videoHandle;
+                                response.receiver = "background";
+                                action.arguments.push(resultingVideoHandle);
+                                chrome.runtime.sendMessage(response);
+                            }
+                        );
+                        
+                    }
+                );
+            }
+        );
+    }
+
+    function getVideoLinks(episodePageLink, callback) {
+        loadWebPage(episodePageLink, processFirstVideoPageDocument, callback);
+    }
+
+    function loadWebPage(href, callback, externalCallback) {
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function () {
+            if (this.readyState === 4 && this.status === 200) {
+                //var fragment = document.createDocumentFragment();
+                //var nodePlaceholder = document.createElement("html");
+                //nodePlaceholder.innerHTML = this.responseXML;
+                //fragment.appendChild(nodePlaceholder);]
+                var placeholderDocument = document.implementation.createHTMLDocument("video");
+                placeholderDocument.documentElement.innerHTML = this.responseText;
+                callback(placeholderDocument, externalCallback);
+            }
+        };
+        xhr.open("GET", href, true);
+        xhr.send();
+    }
+
+    function processFirstVideoPageDocument(videoPageDocument, callback) {
+        var videoFrameLink = videoPageDocument.querySelector("#video-slider div.cts-col-1 iframe").src;
+
+        var lastDescriptionLink = videoPageDocument.querySelector(".cts-description > p:last-of-type > a");
+
+        if (lastDescriptionLink && lastDescriptionLink.href.endsWith("chast-2")) {
+            var secondVideoPartPageLink = lastDescriptionLink.href;
+
+            loadWebPage(
+                videoFrameLink,
+                processVideoFrameDocument,
+                function () {
+                    loadWebPage(
+                        secondVideoPartPageLink,
+                        processSecondVideoPageDocument,
+                        callback
+                    );
+                }
+            );
+        } else {
+            loadWebPage(videoFrameLink, processVideoFrameDocument, callback);
+        }
+    }
+
+    function processSecondVideoPageDocument(videoPageDocument, callback) {
+        var videoFrameLink = videoPageDocument.querySelector("#video-slider div.cts-col-1 iframe").src;
+
+        loadWebPage(videoFrameLink, processVideoFrameDocument, callback);
+    }
+
+    function processVideoFrameDocument(videoFrameDocument, callback) {
+        var videoLink = videoFrameDocument.querySelector("#my-video source[label='mq']").src;
+        chrome.storage.local.get(
+            "videoHandle",
+            function(videoHandleContainer) {
+                var videoHandle = videoHandleContainer.videoHandle;
+                videoHandle.links.push(videoLink);
+                chrome.storage.local.set(
+                    {
+                        "videoHandle": videoHandle
+                    },
+                    function () {
+                        callback();
+                    }
+                );
+            }
+        );
+    }
+
+    function queryPostCount() {
+        //The first article in the post list is an ad, therefore the article count is decreased by one
+        var count = document.querySelectorAll("div.constructor-row:first-of-type div.medium_list > article").length - 1;
+        return count;
+    }
+
+    return {
+        "digForLinks": digForLinks
+    };
+})();
+
+chrome.runtime.onMessage.addListener(processRequest);
 console.log("Content Script");
 
 function processRequest(request) {
@@ -9,154 +167,8 @@ function processRequest(request) {
         if (request.actions) {
             request.actions.forEach(function(action) {
                 var actionName = action.name;
-                window[actionName](...action.arguments);
+                linkDiggingApi[actionName](...action.arguments);
             });
         }
     }
-}
-
-function digForLinks(firstIndex, secondIndex) {
-    var response = {
-        "receiver": "",
-        "actions": []/*,
-        "videoLinks": [],
-        "videoNames": []*/
-    };
-
-    if (firstIndex < 0) {
-        response.receiver = "background";
-        response.actions.push({
-            "type": "error",
-            "name": "handleNegativeFirstIndex",
-            "arguments": ["First index is negative. Only non-negative indeces are allowed."]
-        });
-        chrome.runtime.sendMessage(response);
-        return;
-    }
-
-    if (secondIndex < 0) {
-        response.receiver = "background";
-        response.actions.push({
-            "type": "error",
-            "name": "handleNegativeSecondIndex",
-            "arguments": ["Second index is negative. Only non-negative indeces are allowed."]
-        });
-        chrome.runtime.sendMessage(response);
-        return;
-    }
-
-    var postCount = queryPostCount();
-    //TODO: load more posts
-    var maxIndex = Math.max(firstIndex, secondIndex);
-
-    //var loadMorePostsLink = document.getElementById("148274065995e3c443b2c6058b0953bf73db0352f6");
-
-    //document.querySelector("div.medium_list");
-
-    //while (maxIndex >= count) {
-    //    loadMorePostsLink.click();
-    //}
-
-    if (maxIndex >= postCount) {
-        response.receiver = "background";
-        response.actions.push({
-            "type": "error",
-            "name": "handleIndexOverflow",
-            "arguments": ["There is no corresponding episode for specified index. Load more posts.", firstIndex, secondIndex]
-        });
-        chrome.runtime.sendMessage(response);
-        return;
-    }
-
-    var action = {
-        "type": "routine",
-        "name": "displayLinks",
-        "arguments" : []
-    }
-
-    response.actions.push(action);
-
-    var postOffset = 2;
-
-    var firstPageLink = document.querySelector("div.medium_list > article:nth-child(" + (firstIndex + postOffset) + ") > a").href;
-    var secondPageLink = document.querySelector("div.medium_list > article:nth-child(" + (secondIndex + postOffset) + ") > a").href;
-
-    var firstVideoPartName = document.querySelector("div.medium_list > article:nth-child(" + (firstIndex + postOffset) + ") > a > aside").innerText;
-    var secondVideoPartName = document.querySelector("div.medium_list > article:nth-child(" + (secondIndex + postOffset) + ") > a > aside").innerText;
-
-    var videoHandles = [];
-
-    var firstVideoHandle = {
-        "name": "",
-        "link": ""
-    };
-
-    var secondVideoHandle = {
-        "name": "",
-        "link": ""
-    };
-
-    videoHandles.push(firstVideoHandle, secondVideoHandle);
-
-    firstVideoHandle.name = firstVideoPartName;
-    secondVideoHandle.name = secondVideoPartName;
-
-    getVideoLink(firstPageLink, function (firstVideoLink) {
-        firstVideoHandle.link = firstVideoLink;
-
-        if (response.receiver !== "background") {
-            response.receiver = "background";
-        } else {
-            action.arguments.push(videoHandles);
-            chrome.runtime.sendMessage(response);
-        }
-    });
-    getVideoLink(secondPageLink, function (secondVideoLink) {
-        secondVideoHandle.link = secondVideoLink;
-
-        if (response.receiver !== "background") {
-            response.receiver = "background";
-        } else {
-            action.arguments.push(videoHandles);
-            chrome.runtime.sendMessage(response);
-        }
-    });
-}
-
-function getVideoLink(href, postCallback) {
-    loadVideoPage(href, processVideoPageDocument, postCallback);
-}
-
-function loadVideoPage(href, callback, postCallback) {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function () {
-        if (this.readyState === 4 && this.status === 200) {
-            //var fragment = document.createDocumentFragment();
-            //var nodePlaceholder = document.createElement("html");
-            //nodePlaceholder.innerHTML = this.responseXML;
-            //fragment.appendChild(nodePlaceholder);]
-            var placeholderDocument = document.implementation.createHTMLDocument("video");
-            placeholderDocument.documentElement.innerHTML = this.responseText;
-            callback(placeholderDocument, postCallback);
-        }
-    };
-    xhr.open("GET", href, true);
-    xhr.send();
-}
-
-function processVideoPageDocument(videoPageDocument, postCallback) {
-    var videoFrameLink = videoPageDocument.querySelector("#video-slider div.cts-col-1 iframe").src;
-
-    loadVideoPage(videoFrameLink, processVideoFrameDocument, postCallback);
-}
-
-function processVideoFrameDocument(videoFrameDocument, postCallback) {
-    var videoLink = videoFrameDocument.querySelector("#my-video source[label='mq']").src;
-    postCallback(videoLink);
-}
-
-function queryPostCount() {
-    //The first article in the post list is an ad, that is why the article count is decreased by one
-    var count = document.querySelectorAll("div.constructor-row:first-of-type div.medium_list > article").length - 1;
-    return count;
 }

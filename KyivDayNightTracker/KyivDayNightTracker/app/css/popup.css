@@ -10,6 +10,7 @@
     height: 120px;
     animation: spin 2s linear infinite;
     margin: 0 auto;
+    display: none; /*Loader does not load anything in the beginning*/
 }
 
 @keyframes spin {
