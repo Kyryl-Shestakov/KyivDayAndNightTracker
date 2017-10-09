@@ -114,6 +114,7 @@ var popupApi = (function () {
             var link = document.createElement("a");
             link.href = videoHandle.links[i];
             link.className = "list-group-item";
+            link.target = "_blank"; //the video should open in a new tab
             link.innerText = shortHandTitle +
                 ((videoHandle.links.length > 1) ?
                 (". \u0427\u0430\u0441\u0442\u0438\u043D\u0430 " + (i + 1)) : ""); //Spells out the word 'part' in ukrainian
