@@ -101,8 +101,8 @@
 
         var lastDescriptionLink = videoPageDocument.querySelector(".cts-description > p:last-of-type > a");
 
-        if (lastDescriptionLink && lastDescriptionLink.href.endsWith("chast-2")) {
-            var secondVideoPartPageLink = lastDescriptionLink.href;
+        if (lastDescriptionLink && lastDescriptionLink.attributes.getNamedItem("href").value.endsWith("chast-2")) {
+            var secondVideoPartPageLink = lastDescriptionLink.attributes.getNamedItem("href").value;
 
             loadWebPage(
                 videoFrameLink,
