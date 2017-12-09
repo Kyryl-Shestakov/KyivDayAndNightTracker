@@ -5,20 +5,22 @@ chrome.runtime.onInstalled.addListener(function() {
     // With a new rule ...
     chrome.declarativeContent.onPageChanged.addRules([
       {
-        // That fires when page URL corresponds to http://kyivdennoch.novy.tv/ua/ or http://kyivdennoch.novy.tv/ua/episodes/
+          // That fires when page URL corresponds to 
+          // http://kyivdennoch.novy.tv/ua/ or https://kyivdennoch.novy.tv/ua/ or
+          // http://kyivdennoch.novy.tv/ua/episodes/ or https://kyivdennoch.novy.tv/ua/episodes/
         conditions: [
           new chrome.declarativeContent.PageStateMatcher({
             pageUrl: { 
 				hostEquals: "kyivdennoch.novy.tv",
 				pathEquals: "/ua/",
-				schemes: ["http"]
+				schemes: ["http", "https"]
 			}
           }),
 		  new chrome.declarativeContent.PageStateMatcher({
             pageUrl: { 
 				hostEquals: "kyivdennoch.novy.tv",
 				pathEquals: "/ua/episodes/",
-				schemes: ["http"]
+				schemes: ["http", "https"]
 			}
           })
         ],

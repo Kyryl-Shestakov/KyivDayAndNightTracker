@@ -6,9 +6,10 @@
   "version": "1.0",
 
   "permissions": [
-	"declarativeContent",
+    "declarativeContent",
     "http://player.novy.tv/embed/*",
     "https://player.novy.tv/embed/*",
+    "http://kyivdennoch.novy.tv/*",
     "activeTab",
     "tabs",
     "storage",
@@ -16,7 +17,7 @@
   ],
   "content_scripts": [
     {
-      "matches": [ "http://kyivdennoch.novy.tv/ua/", "http://kyivdennoch.novy.tv/ua/episodes/" ],
+      "matches": [ "https://kyivdennoch.novy.tv/ua/", "https://kyivdennoch.novy.tv/ua/episodes/" ],
       "js": [ "js/linkDigging.js" ],
       "run_at": "document_end"
     }

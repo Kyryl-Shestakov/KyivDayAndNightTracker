@@ -92,7 +92,10 @@
                 callback(placeholderDocument, externalCallback);
             }
         };
-        xhr.open("GET", href, true);
+
+        // TODO: implement more complex logic of schema prepending
+        var url = href.startsWith("https://") ? href : ("https:" + href); 
+        xhr.open("GET", url, true);
         xhr.send();
     }
 
