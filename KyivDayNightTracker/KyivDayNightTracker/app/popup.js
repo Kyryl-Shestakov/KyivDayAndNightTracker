@@ -14,7 +14,7 @@ var popupApi = (function () {
                                     {
                                         "episodeLinkOffsetIndex": index - 1
                                     },
-                                    queryForLinks
+                                    queryVideoPost
                                 );
                             }
                         }
@@ -34,7 +34,7 @@ var popupApi = (function () {
                                 {
                                     "episodeLinkOffsetIndex": index + 1
                                 },
-                                queryForLinks
+                                queryVideoPost
                             );
                         }
                     );
@@ -52,7 +52,7 @@ var popupApi = (function () {
             {
                 "episodeLinkOffsetIndex": 0
             },
-            queryForLinks
+            queryVideoPost
         );
     }
 
@@ -77,10 +77,48 @@ var popupApi = (function () {
                             tabId,
                             {
                                 "sender": "popup",
+                                "receiver": "mainContentScript",
                                 "actions": [
                                     {
                                         "type": "routine",
                                         "name": "digForLinks",
+                                        "arguments": [index]
+                                    }
+                                ]
+                            }
+                        );
+                    }
+                );
+            }
+        );
+    }
+
+    function queryVideoPost() {
+        startTheLoader();
+
+        chrome.tabs.query(
+            {
+                "active": true,
+                "currentWindow": true
+            },
+            function (tabs) {
+                var tab = tabs[0];
+                var tabId = tab.id;
+
+                chrome.storage.local.get(
+                    "episodeLinkOffsetIndex", //dependency 4 - index
+                    function (indexContainer) {
+                        var index = indexContainer.episodeLinkOffsetIndex;
+
+                        chrome.tabs.sendMessage(
+                            tabId,
+                            {
+                                "sender": "popup",
+                                "receiver": "mainContentScript",
+                                "actions": [
+                                    {
+                                        "type": "routine",
+                                        "name": "getVideoPostLink",
                                         "arguments": [index]
                                     }
                                 ]

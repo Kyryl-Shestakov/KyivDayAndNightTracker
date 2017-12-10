@@ -17,14 +17,13 @@
         }
 
         var postCount = queryPostCount();
-        //TODO: load more posts
 
         if (episodeIndex >= postCount) {
             response.receiver = "background";
             response.actions.push({
                 "type": "error",
                 "name": "handleIndexOverflow",
-                "arguments": ["There is no corresponding episode for specified index. Load more posts.", episodeIndex]
+                "arguments": ["There is no corresponding episode for specified index.", episodeIndex]
             });
             chrome.runtime.sendMessage(response);
             return;
@@ -83,10 +82,6 @@
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function () {
             if (this.readyState === 4 && this.status === 200) {
-                //var fragment = document.createDocumentFragment();
-                //var nodePlaceholder = document.createElement("html");
-                //nodePlaceholder.innerHTML = this.responseXML;
-                //fragment.appendChild(nodePlaceholder);]
                 var placeholderDocument = document.implementation.createHTMLDocument("video");
                 placeholderDocument.documentElement.innerHTML = this.responseText;
                 callback(placeholderDocument, externalCallback);
@@ -149,13 +144,76 @@
     }
 
     function queryPostCount() {
-        //The first article in the post list is an ad, therefore the article count is decreased by one
-        var count = document.querySelectorAll("div.constructor-row:first-of-type div.medium_list > article").length - 1;
+        var count = document.querySelectorAll("div.constructor-row:first-of-type .post_video").length;
         return count;
     }
 
+    function getVideoPostLink(episodeIndex) {
+        var response = {
+            "receiver": "",
+            "actions": []
+        };
+
+        if (episodeIndex < 0) {
+            response.receiver = "background";
+            response.actions.push({
+                "type": "error",
+                "name": "handleNegativeEpisodeIndex",
+                "arguments": ["Episode index is negative. Only non-negative indeces are allowed.", episodeIndex]
+            });
+            chrome.runtime.sendMessage(response);
+            return;
+        }
+
+        var postCount = queryPostCount();
+
+        if (episodeIndex >= postCount) {
+            response.receiver = "background";
+            response.actions.push({
+                "type": "error",
+                "name": "handleIndexOverflow",
+                "arguments": ["There is no corresponding episode for specified index.", episodeIndex]
+            });
+            chrome.runtime.sendMessage(response);
+            return;
+        }
+
+        var action = {
+            "type": "routine",
+            "name": "processVideoPostLink",
+            "arguments": []
+        }
+
+        response.actions.push(action);
+        response.receiver = "background";
+
+        var postOffset = 2; //because episodeIndex starts with zero and the first article is an ad
+
+        var postAnchor = document.querySelector(
+            "div.medium_list > article:nth-child(" +
+            (episodeIndex + postOffset) +
+            ") > a"
+        );
+
+        var pageLink = postAnchor.href;
+
+        var videoTitle = postAnchor.children[1].innerText;
+
+        action.arguments.push(pageLink);
+        action.arguments.push(videoTitle);
+
+        chrome.runtime.sendMessage(response);
+    }
+
+    function loadMorePosts() {
+        var loadLink = document.querySelector("div.load-more-posts.more-ConNovy_mediumX > a");
+        loadLink.click();
+    }
+
     return {
-        "digForLinks": digForLinks
+        "digForLinks": digForLinks,
+        "getVideoPostLink": getVideoPostLink,
+        "loadMorePosts": loadMorePosts
     };
 })();
 
@@ -166,12 +224,16 @@ function processRequest(request) {
     console.log("Tab received a request ->");
     console.log(request);
 
-    if (request.sender && request.sender === "popup") {
-        if (request.actions) {
-            request.actions.forEach(function(action) {
-                var actionName = action.name;
-                linkDiggingApi[actionName](...action.arguments);
-            });
-        }
+    if (
+        request.receiver &&
+        request.receiver === "mainContentScript" &&
+        request.actions
+    ) {
+        request.actions.forEach(function(action) {
+            var actionName = action.name;
+            var actionArguments = action.arguments;
+
+            linkDiggingApi[actionName](...actionArguments);
+        });
     }
 }
