@@ -31,9 +31,9 @@ chrome.runtime.onInstalled.addListener(function() {
   });
 });
 
-var refererVideoPage;
-
 var backgroundApi = (function () {
+
+    var refererVideoPage;
 
     function handleIndexOverflow(message) {
         var popupWindow = chrome.extension.getViews({ "type": "popup" })[0];
@@ -135,8 +135,31 @@ var backgroundApi = (function () {
         );
     }
 
+    function manipulateRequest(details) {
+        details.requestHeaders.push({
+            name: "Referer",
+            value: refererVideoPage
+        });
+        return {
+            requestHeaders: details.requestHeaders
+        };
+    }
+
     function getVideoLinks(episodePageLink, callback) {
         refererVideoPage = episodePageLink;
+
+        if (
+            chrome.webRequest.onBeforeSendHeaders.hasListener(manipulateRequest)
+        ) {
+            chrome.webRequest.onBeforeSendHeaders.removeListener(manipulateRequest);
+        }
+
+        chrome.webRequest.onBeforeSendHeaders.addListener(
+            manipulateRequest,
+            { urls: ["*://player.novy.tv/embed/*"] },
+            ["blocking", "requestHeaders"]
+        );
+
         loadWebPage(episodePageLink, processFirstVideoPageText, callback);
     }
 
@@ -150,7 +173,11 @@ var backgroundApi = (function () {
         };
 
         // TODO: implement more complex logic of schema prepending
-        var url = href.startsWith("https://") ? href : ("https:" + href); 
+        var url = href.startsWith("https://")
+            ? href
+            : (
+                href.startsWith("//") ? ("https:" + href) : ("https://" + href)
+            );
         xhr.open("GET", url, true);
         xhr.send();
     }
@@ -233,20 +260,4 @@ function processResponse(response) {
             backgroundApi[actionName](...actionArguments);
         });
     }
-}
-
-chrome.webRequest.onBeforeSendHeaders.addListener(
-    manipulateRequest,
-    { urls: ["*://player.novy.tv/embed/*"] },
-    ["blocking", "requestHeaders"]
-);
-
-function manipulateRequest(details) {
-    details.requestHeaders.push({
-        name: "Referer",
-        value: refererVideoPage
-    });
-    return {
-        requestHeaders: details.requestHeaders
-    };
 }
